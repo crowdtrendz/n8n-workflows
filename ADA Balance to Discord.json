@@ -1,0 +1,202 @@
+{
+  "name": "ADA Balance to Discord",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -32,
+        32
+      ],
+      "id": "869de6cf-2878-4515-82cd-c16808d84de0",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "from datetime import datetime\n\n# _now : equivalent to n8n's $now\n_now = datetime.now()\n\n# _today : equivalent to n8n's $today\n_today = _now.replace(hour=0, minute=0, second=0, microsecond=0)\n\n# n8n expects a list of dicts\n# Each dict = one item with JSON data\nreturn [\n    {\n        \"_now\": _now.isoformat(),\n        \"_today\": _today.isoformat()\n    }\n]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        32
+      ],
+      "id": "90d87055-0caa-44bd-8ee4-d715b8f159f6",
+      "name": "Extract Time"
+    },
+    {
+      "parameters": {
+        "network": "mainnet",
+        "address": "Enter Address Here!"
+      },
+      "type": "n8n-nodes-crowd-bf-explorer.crowdBfExplorer",
+      "typeVersion": 1,
+      "position": [
+        336,
+        32
+      ],
+      "id": "dbbac32f-e3b0-4f61-a131-58f3bfe2b3ab",
+      "name": "Crowd BF Explorer",
+      "credentials": {
+        "blockfrostApi": {
+          "id": "A1G4mFb1GCxEYtdA",
+          "name": "Blockfrost account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "options": {},
+        "embeds": {
+          "values": [
+            {
+              "description": "=Balance: {{ Math.round($node[\"Crowd BF Explorer\"].json[\"balance\"][\"ada\"] * 100) / 100 }} ADA\n",
+              "color": "#0AD58B",
+              "timestamp": "={{ $node[\"Extract Time\"].json._now }}",
+              "title": "💰 Enter Title"
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1024,
+        32
+      ],
+      "id": "1c734ab6-479a-43a8-aea2-a8c5c8a8594a",
+      "name": "Discord Message",
+      "webhookId": "1c08e574-5150-4509-bb78-3b139f1160f0",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "upswyM9EvdIWLfPa",
+          "name": "Strike Fees"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 🗓️ Schedule Trigger\nKick things off automatically **every hour** at the 30-minute mark.",
+        "height": 192,
+        "width": 256,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -112,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "cdfa2cb0-e9c9-4d5d-99b0-3adc7ffcf511",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## 🌐 Crowd BF Explorer\nFetch the **latest ADA balance** from the Crowd Blockfrost Explorer (Mainnet address)\n\nBlockfrost API Credentials (created by CrowdTrendz)",
+        "height": 192,
+        "width": 288,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        224,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "fce57d31-910e-430c-9662-487abeb1e9fa",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## ⏱️ Extract Time\nCapture the **current timestamp** and **today’s date** to tag the data.",
+        "height": 192,
+        "width": 288,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        576,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "aa42c4db-7dfd-4a47-b7e5-a65f5a656bb0",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## 💬 Discord Message\nSend a **styled Discord message** with the **balance in ADA** + timestamp.",
+        "height": 192,
+        "width": 288,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        944,
+        -240
+      ],
+      "typeVersion": 1,
+      "id": "a79ebe5d-d7e8-45ec-83fc-5a328b1d444b",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Crowd BF Explorer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Time": {
+      "main": [
+        [
+          {
+            "node": "Discord Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crowd BF Explorer": {
+      "main": [
+        [
+          {
+            "node": "Extract Time",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "403a94bf-08b7-4a44-ae82-c1b54cad74d4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cf7d1c780c5d67fce0f88b28af2c6cc416207f232b69be1685f77a7fa81bc5c6"
+  },
+  "id": "7YPdhoWPkJXSpM5a",
+  "tags": []
+}
