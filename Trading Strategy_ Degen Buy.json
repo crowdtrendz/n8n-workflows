@@ -1,0 +1,328 @@
+{
+  "name": "Trading Strategy: Degen Buy",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        272,
+        64
+      ],
+      "id": "33795a74-b455-4f21-8ca5-1c344072b229",
+      "name": "When clicking ‘Execute workflow’",
+      "notesInFlow": true,
+      "notes": "Manual start. Use this when you're ready to fire the Degen Buy. There are no schedules or webhooks here by design — this is a trader-triggered play."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b25ad8a0-ac55-430d-8ebf-14bd0930bbe5",
+              "name": "policyid",
+              "value": "f13ac4d66b3ee19a6aa0f2a22298737bd907cc95121662fc971b5275535452494b45",
+              "type": "string"
+            },
+            {
+              "id": "9ecb80e5-eb7e-4f8f-a2e9-29f99126cec7",
+              "name": "amount",
+              "value": 20,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        64
+      ],
+      "id": "336b6a23-5ad8-4ba9-8055-23a24deecb00",
+      "name": "Set Parameters",
+      "notesInFlow": true,
+      "notes": "Inputs for the strategy:\n• policyid: Cardano token policy ID to buy.\n• amount: ADA to swap per wallet (e.g., 20). Adjust here pre-run.\nThese values are referenced by the swap nodes using expressions like $('Set Parameters').item.json.amount."
+    },
+    {
+      "parameters": {
+        "operation": "queryWalletBalances"
+      },
+      "type": "n8n-nodes-crowdtrendz-wallet.crowdTrendzWallet",
+      "typeVersion": 1,
+      "position": [
+        784,
+        -96
+      ],
+      "id": "733d3fb8-d914-425a-956d-a03853026cf0",
+      "name": "Wallet 1 Balance",
+      "notesInFlow": true,
+      "credentials": {
+        "crowdTrendzWallet": {
+          "id": "lf8L5LctYlTIZm26",
+          "name": "twallet1"
+        }
+      },
+      "notes": "Checks ADA balance for twallet1 before executing the swap. If balance is insufficient, the following swap will fail — consider adding a guard in a future iteration."
+    },
+    {
+      "parameters": {
+        "operation": "queryWalletBalances"
+      },
+      "type": "n8n-nodes-crowdtrendz-wallet.crowdTrendzWallet",
+      "typeVersion": 1,
+      "position": [
+        784,
+        96
+      ],
+      "id": "65bc52db-141b-409b-9ce4-e43f756c7919",
+      "name": "Wallet 2 Balance",
+      "notesInFlow": true,
+      "credentials": {
+        "crowdTrendzWallet": {
+          "id": "O6pJuOyYwu8TVPvt",
+          "name": "twallet2"
+        }
+      },
+      "notes": "Checks ADA balance for twallet2. Optional enhancement: add a conditional to skip the swap if ADA < amount."
+    },
+    {
+      "parameters": {
+        "operation": "queryWalletBalances"
+      },
+      "type": "n8n-nodes-crowdtrendz-wallet.crowdTrendzWallet",
+      "typeVersion": 1,
+      "position": [
+        784,
+        272
+      ],
+      "id": "41c17c77-1ab1-4e03-b814-8331e94993dd",
+      "name": "Wallet 3 Balance",
+      "notesInFlow": true,
+      "credentials": {
+        "crowdTrendzWallet": {
+          "id": "szzrYVSXtLqPfy4W",
+          "name": "twallet3"
+        }
+      },
+      "notes": "Checks ADA balance for twallet3. Balances are read before any swap to reduce avoidable failures."
+    },
+    {
+      "parameters": {
+        "operation": "executeSwap",
+        "toToken": "={{ $('Set Parameters').item.json.policyid }}",
+        "swapAmount": "={{ $('Set Parameters').item.json.amount }}",
+        "slippageTolerance": 4,
+        "allowMultiHops": false
+      },
+      "type": "n8n-nodes-crowdtrendz-wallet.crowdTrendzWallet",
+      "typeVersion": 1,
+      "position": [
+        992,
+        -96
+      ],
+      "id": "3ea3ad4c-8647-4b4d-a59c-47fd7783dc3e",
+      "name": "Wallet 1 Execute Trade",
+      "notesInFlow": true,
+      "credentials": {
+        "crowdTrendzWallet": {
+          "id": "lf8L5LctYlTIZm26",
+          "name": "twallet1"
+        }
+      },
+      "disabled": true,
+      "notes": "Executes ADA → token swap for twallet1.\n• toToken: policyid from Set Parameters\n• swapAmount: amount per wallet\n• slippageTolerance: 4%\n• allowMultiHops: false (direct route only)"
+    },
+    {
+      "parameters": {
+        "operation": "executeSwap",
+        "toToken": "={{ $('Set Parameters').item.json.policyid }}",
+        "swapAmount": "={{ $('Set Parameters').item.json.amount }}",
+        "slippageTolerance": 4,
+        "allowMultiHops": false
+      },
+      "type": "n8n-nodes-crowdtrendz-wallet.crowdTrendzWallet",
+      "typeVersion": 1,
+      "position": [
+        992,
+        96
+      ],
+      "id": "42dbbd94-17ee-475a-95a8-edb65b72f72c",
+      "name": "Wallet 2 Execute Trade",
+      "notesInFlow": true,
+      "credentials": {
+        "crowdTrendzWallet": {
+          "id": "O6pJuOyYwu8TVPvt",
+          "name": "twallet2"
+        }
+      },
+      "disabled": true,
+      "notes": "Executes ADA → token swap for twallet2 with the same params. If the DEX price moves >4% during execution, this will reject."
+    },
+    {
+      "parameters": {
+        "content": "## How to trigger\nDEGEN BUY (Cardano only) — Built by CrowdTrendz. One-click multi-wallet entry into a token using policy ID + ADA per wallet. Manual trigger by design.",
+        "height": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -208
+      ],
+      "id": "947cd822-ea80-499c-b183-a8f70cd9c5bd",
+      "name": "📌 Overview"
+    },
+    {
+      "parameters": {
+        "content": "## Set Parameters\n\nSet these before running:\n• policyid = target token policy ID + asset name\n• amount = ADA per wallet\nTip: Save multiple versions of this workflow with pre-filled targets for different plays.",
+        "height": 224,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        432,
+        -208
+      ],
+      "id": "2bbbfe3a-3ce9-4e5a-9288-40a540655c15",
+      "name": "📝 Parameters"
+    },
+    {
+      "parameters": {
+        "content": "## Risk controls:\n• Slippage = 4% (tight). Increase only if you expect volatile price moves.\n• allowMultiHops = false (direct route). Enable if liquidity is fragmented.",
+        "height": 208,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        -48
+      ],
+      "id": "789b92d1-74ce-4784-bd76-b23f8546fc6a",
+      "name": "⚠️ Slippage & Routing"
+    },
+    {
+      "parameters": {
+        "content": "## Warning\n\nBy executing the workflow, you will place orders in mainnet.\n\nTo test this workflow, make sure you re-activate the execute trade nodes.",
+        "height": 208,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        192
+      ],
+      "id": "9b91b19a-54e6-42d3-8c24-818144d75b23",
+      "name": "🔮 Enhancements"
+    },
+    {
+      "parameters": {
+        "operation": "executeSwap",
+        "toToken": "={{ $('Set Parameters').item.json.policyid }}",
+        "swapAmount": "={{ $('Set Parameters').item.json.amount }}",
+        "slippageTolerance": 4,
+        "allowMultiHops": false
+      },
+      "type": "n8n-nodes-crowdtrendz-wallet.crowdTrendzWallet",
+      "typeVersion": 1,
+      "position": [
+        992,
+        272
+      ],
+      "id": "64be05de-cd2d-4bae-af36-83d33033b41e",
+      "name": "Wallet 3 Execute Trade",
+      "notesInFlow": true,
+      "credentials": {
+        "crowdTrendzWallet": {
+          "id": "szzrYVSXtLqPfy4W",
+          "name": "twallet3"
+        }
+      },
+      "disabled": true,
+      "notes": "Executes ADA → token swap for twallet3. Note: node name contains 'Wallet 2' but uses twallet3 credentials — kept as-is to preserve your IDs/naming."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Set Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Parameters": {
+      "main": [
+        [
+          {
+            "node": "Wallet 1 Balance",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wallet 2 Balance",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Wallet 3 Balance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wallet 1 Balance": {
+      "main": [
+        [
+          {
+            "node": "Wallet 1 Execute Trade",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wallet 2 Balance": {
+      "main": [
+        [
+          {
+            "node": "Wallet 2 Execute Trade",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wallet 3 Balance": {
+      "main": [
+        [
+          {
+            "node": "Wallet 3 Execute Trade",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "36774db5-5305-448b-9ea9-05855f1e6709",
+  "meta": {
+    "instanceId": "cf7d1c780c5d67fce0f88b28af2c6cc416207f232b69be1685f77a7fa81bc5c6"
+  },
+  "id": "843NQhTI0xGcfDQl",
+  "tags": []
+}
