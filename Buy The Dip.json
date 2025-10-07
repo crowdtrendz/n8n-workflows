@@ -1,0 +1,320 @@
+{
+  "name": "Buy The Dip",
+  "nodes": [
+    {
+      "parameters": {
+        "token": "{\"policy_id\":\"29d222ce763455e3d7a09a665ce554f00ac89d2e99a1a83d267170c6\",\"asset_name\":\"4d494e\",\"combined_policy\":\"29d222ce763455e3d7a09a665ce554f00ac89d2e99a1a83d267170c64d494e\",\"name\":\"Minswap\",\"symbol\":\"MIN\",\"decimals\":6,\"description\":\"Minswap is a multi-pool decentralize exchange protocol on Cardano\"}"
+      },
+      "type": "n8n-nodes-crowdtrendz-wallet.crowdTrendzTokenSelector",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        48
+      ],
+      "id": "13cc3ec1-68ba-4fb0-8d37-92b5a4561891",
+      "name": "CrowdTrendz DEX Utility- Token Selector"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -368,
+        48
+      ],
+      "id": "57a45b41-6727-475f-94e9-b1864312e371",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getQuote",
+        "toToken": "={{ $('CrowdTrendz DEX Utility- Token Selector').item.json.combined_policy }}",
+        "swapAmount": "={{ $('CrowdTrendz DEX - Trade Parameters').item.json.amount }}"
+      },
+      "type": "n8n-nodes-crowdtrendz-wallet.crowdTrendzWallet",
+      "typeVersion": 1,
+      "position": [
+        336,
+        48
+      ],
+      "id": "a682a90d-b941-4766-8739-ba06164a22e4",
+      "name": "Get Quote",
+      "credentials": {
+        "crowdTrendzWallet": {
+          "id": "vv6CNJBOfY9LBchn",
+          "name": "ACW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "calculateQuotePrices"
+      },
+      "type": "n8n-nodes-crowdtrendz-wallet.crowdTrendzWallet",
+      "typeVersion": 1,
+      "position": [
+        544,
+        48
+      ],
+      "id": "f687a179-d551-4f70-be40-cd4661e323f4",
+      "name": "Calculate Price",
+      "credentials": {
+        "crowdTrendzWallet": {
+          "id": "vv6CNJBOfY9LBchn",
+          "name": "ACW"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "28deacf5-4897-4445-844d-92f3d1b71a22",
+              "leftValue": "={{ $json.pricePerToken }}",
+              "rightValue": "={{ $('CrowdTrendz DEX - Trade Parameters').item.json.target_price }}",
+              "operator": {
+                "type": "number",
+                "operation": "lte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        768,
+        48
+      ],
+      "id": "1e776435-a5fc-4bde-bff6-07267705b367",
+      "name": "Check Price Condition"
+    },
+    {
+      "parameters": {
+        "operation": "executeSwap",
+        "toToken": "={{ $('CrowdTrendz DEX Utility- Token Selector').item.json.combined_policy }}",
+        "swapAmount": "={{ $('CrowdTrendz DEX - Trade Parameters').item.json.amount }}"
+      },
+      "type": "n8n-nodes-crowdtrendz-wallet.crowdTrendzWallet",
+      "typeVersion": 1,
+      "position": [
+        992,
+        32
+      ],
+      "id": "8027f7f0-2a9d-4fc1-a593-0a9443fe2861",
+      "name": "Execute DEX Swap",
+      "credentials": {
+        "crowdTrendzWallet": {
+          "id": "vv6CNJBOfY9LBchn",
+          "name": "ACW"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "### 🎯 WHAT THIS DOES \nAutomatically monitors CNT token price **every hour** and executes a buy order when your target price is reached. Change the schedule based on your needs.",
+        "height": 256,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -448,
+        -272
+      ],
+      "typeVersion": 1,
+      "id": "a4e974a4-1baf-47db-affb-24de724d3a11",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "### 🪙 TOKEN SELECTION\n📍 Double click \"Token Selector\" to open settings. \n\nTo change the token, select a different token from the \"Token\" dropdown menu.",
+        "height": 256,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -192,
+        -272
+      ],
+      "typeVersion": 1,
+      "id": "17c29feb-0ed1-4b03-b43c-13bce7268908",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "### 💡 SET PARAMETERS\n📍 Double click \"Trade Parameters\" to open settings.\n\nChange the target price of 1.5 to your desired buy price.\n\nChange the amount of 100 to your desired amount.",
+        "height": 256,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        80,
+        -272
+      ],
+      "typeVersion": 1,
+      "id": "19307b08-10ad-407e-9c27-989aacbe6939",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "### 🚀  ACTIVATE THE SWAP\nDouble click \"Execute DEX Swap\" to open settings.\n\nRight-click the node OR click the three dots and select \"Enable\" (currently showing as disabled/grayed out).",
+        "height": 256,
+        "width": 272,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        384,
+        -272
+      ],
+      "typeVersion": 1,
+      "id": "8e6ce364-92a1-4b39-99f7-62b773e12c50",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "### 🛡️ SAFETY TIP\nKeep the swap disabled while testing. Only enable when you're 100% ready for automatic purchases!",
+        "height": 96,
+        "width": 400,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        592,
+        240
+      ],
+      "typeVersion": 1,
+      "id": "63b8b2ef-990f-45ac-8947-a5ce4b423f7f",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "### ✅ BEFORE GOING LIVE\n✓ Choose your token in \"Token Selector\".\n✓ Set your purchase amount in \"Trade Parameters\".\n✓ Set your target price in \"Trade Parameters\".\n✓ Verify wallet has enough ADA balance.\n✓ Test the workflow manually first.\n✓ Enable \"Execute DEX Swap\" node\n✓ Activate the workflow (toggle at top).",
+        "height": 256,
+        "width": 336,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        720,
+        -272
+      ],
+      "typeVersion": 1,
+      "id": "f3f66429-9eba-4565-ad59-f56102c52d8d",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "amount": 100,
+        "exposure": null,
+        "targetPrice": 1.5
+      },
+      "type": "n8n-nodes-crowdtrendz-wallet.crowdTrendzTradeParameters",
+      "typeVersion": 1,
+      "position": [
+        144,
+        48
+      ],
+      "id": "553cfb7a-06bd-4ee3-9ebc-54743bd83684",
+      "name": "CrowdTrendz DEX - Trade Parameters"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "CrowdTrendz DEX Utility- Token Selector": {
+      "main": [
+        [
+          {
+            "node": "CrowdTrendz DEX - Trade Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "CrowdTrendz DEX Utility- Token Selector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Quote": {
+      "main": [
+        [
+          {
+            "node": "Calculate Price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Price": {
+      "main": [
+        [
+          {
+            "node": "Check Price Condition",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Price Condition": {
+      "main": [
+        [
+          {
+            "node": "Execute DEX Swap",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CrowdTrendz DEX - Trade Parameters": {
+      "main": [
+        [
+          {
+            "node": "Get Quote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "93a6d9d6-2541-4632-bed6-448d2f7ba743",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cf7d1c780c5d67fce0f88b28af2c6cc416207f232b69be1685f77a7fa81bc5c6"
+  },
+  "id": "efgyWMDRMbaCMJUM",
+  "tags": []
+}
