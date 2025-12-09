@@ -1,0 +1,936 @@
+{
+  "name": "Kraken NIGHT Simple Trading Bot (Whitelisted)",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.kraken.com/0/public/Ticker",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "pair",
+              "value": "NIGHTUSD"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2048,
+        384
+      ],
+      "id": "9bbee86d-02c3-4148-bc17-3533913cdbed",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -192,
+        288
+      ],
+      "id": "32c30f98-47cb-49ed-9856-042fa3503c08",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        928,
+        384
+      ],
+      "id": "3aeae5f0-6855-478d-b7f8-c72030570bc4",
+      "name": "Wait",
+      "webhookId": "404e6823-cf18-4f63-a0b4-401ade2493d9"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.kraken.com/0/private/Balance",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "API-Key",
+              "value": "={{ $node[\"GenerateSignature\"].json[\"apiKey\"] }}"
+            },
+            {
+              "name": "API-Sign",
+              "value": "={{ $node[\"GenerateSignature\"].json[\"signature\"] }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "nonce",
+              "value": "={{ $node[\"GenerateSignature\"].json[\"nonce\"] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        704,
+        384
+      ],
+      "id": "cc8021dd-5d44-4e21-b8b2-bc0adffd46cf",
+      "name": "GetBalance"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('node:crypto');\nconst apiKey = $('Configuration').first().json.kkpuikey ;\nconst privateKey = $('Configuration').first().json.kkpvkey ;\nconst nonce = (Date.now() * 1000).toString();  // Use microseconds like Kraken expects\nconst path = '/0/private/Balance';\nconst payload = `nonce=${nonce}`;\nconst getMessageSignature = (path, request, secret, nonce) => {\n  const message = request;\n  const secret_buffer = new Buffer(secret, 'base64');\n  const hash = new crypto.createHash('sha256');\n  const hmac = new crypto.createHmac('sha512', secret_buffer);\n  const hash_digest = hash.update(nonce + message).digest('binary');\n  const hmac_digest = hmac.update(path + hash_digest, 'binary').digest('base64');\n  return hmac_digest;\n};\nreturn {\n  apiKey: apiKey,\n  signature: getMessageSignature(path, payload, privateKey, nonce),\n  nonce: nonce\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        384
+      ],
+      "id": "ab033412-9998-4dac-b478-8e1b8d214c53",
+      "name": "GenerateSignature"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('node:crypto');\nconst apiKey = $('Configuration').first().json.kkpuikey;\nconst privateKey = $('Configuration').first().json.kkpvkey;\nconst nonce = (Date.now() * 1000).toString();\nconst path = '/0/private/TradesHistory';\n\n// Add pagination parameters\nconst payload = `nonce=${nonce}&count=100`;  // Get last 100 trades instead of default 50\n\nconst getMessageSignature = (path, request, secret, nonce) => {\n  const message = request;\n  const secret_buffer = new Buffer(secret, 'base64');\n  const hash = new crypto.createHash('sha256');\n  const hmac = new crypto.createHmac('sha512', secret_buffer);\n  const hash_digest = hash.update(nonce + message).digest('binary');\n  const hmac_digest = hmac.update(path + hash_digest, 'binary').digest('base64');\n  return hmac_digest;\n};\n\nreturn {\n  apiKey: apiKey,\n  signature: getMessageSignature(path, payload, privateKey, nonce),\n  nonce: nonce\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        384
+      ],
+      "id": "c608ca0c-4f7a-454b-a77f-13f4d1523025",
+      "name": "RecentTradeSignature"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.kraken.com/0/private/TradesHistory",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "API-Key",
+              "value": "={{$json.apiKey}}"
+            },
+            {
+              "name": "API-Sign",
+              "value": "={{$json.signature}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "nonce",
+              "value": "={{$json.nonce}}"
+            },
+            {
+              "name": "count",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1376,
+        384
+      ],
+      "id": "84558543-0dfc-41e7-9879-8ea4709f9b4d",
+      "name": "GetRecentTrades"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1824,
+        384
+      ],
+      "id": "460f5e94-3442-480d-b3fc-db39371e4221",
+      "name": "Wait1",
+      "webhookId": "0d9eab23-f6f7-4b03-a31c-a0bb9f9f0d6f"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "BUY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "8589da7f-526a-40fd-bdaf-92349065f168"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "BUY ROUTE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4d6d1dae-199a-41b3-b607-1d513c39bf3b",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "SELL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "SELL ROUTE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a99c19eb-59ba-4495-bb97-6c5a4b23caf5",
+                    "leftValue": "={{ $json.decision }}",
+                    "rightValue": "DO NOTHING",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DO NOTHING ROUTE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2496,
+        368
+      ],
+      "id": "0cd6bdac-faca-4b71-991d-5fca3ca8d758",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kraken.com/0/private/AddOrder",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "API-Key",
+              "value": "={{$json.apiKey}}"
+            },
+            {
+              "name": "API-Sign",
+              "value": "={{$json.signature}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "specifyBody": "string",
+        "body": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3168,
+        96
+      ],
+      "id": "65e7874b-95a3-420f-a7ff-e101eddde8c6",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kraken.com/0/private/AddOrder",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "API-Key",
+              "value": "={{ $node[\"SellSignature\"].json[\"apiKey\"] }}"
+            },
+            {
+              "name": "API-Sign",
+              "value": "={{ $node[\"SellSignature\"].json[\"signature\"] }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "specifyBody": "string",
+        "body": "={{ $node[\"SellSignature\"].json[\"body\"] }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3168,
+        608
+      ],
+      "id": "eec79c80-1863-48ca-894e-a8e60359dd3b",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ parseFloat($('GetBalance').item.json.result.ZUSD) }}",
+                    "rightValue": "={{50}}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "gte"
+                    },
+                    "id": "8589da7f-526a-40fd-bdaf-92349065f168"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "SUFFICIENT BALANCE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "4d6d1dae-199a-41b3-b607-1d513c39bf3b",
+                    "leftValue": "={{ parseFloat($('GetBalance').item.json.result.ZUSD) }}",
+                    "rightValue": "={{50}}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "INSUFFICIENT BALANCE"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        2720,
+        288
+      ],
+      "id": "f75921a0-3110-4ce9-a454-d6d692ec497a",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "errorMessage": "INSUFFICIENT BALANCE"
+      },
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        2944,
+        384
+      ],
+      "id": "e28bb6ef-abbf-481f-8fe3-c5fe570658bc",
+      "name": "Stop and Error"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('node:crypto');\nconst apiKey = $('Configuration').first().json.kkpuikey ;\nconst privateKey = $('Configuration').first().json.kkpvkey ;\nconst nonce = (Date.now() * 1000).toString();  // Microseconds\nconst path = '/0/private/AddOrder';\n\n// Reference your volume variable here\nconst volume = $node[\"VolVar\"].json[\"volume\"];\n\nconst payload = `nonce=${nonce}&ordertype=market&type=buy&volume=${volume}&pair=NIGHTUSD`;\n\nconst getMessageSignature = (path, request, secret, nonce) => {\n  const message = request;\n  const secret_buffer = new Buffer(secret, 'base64');\n  const hash = new crypto.createHash('sha256');\n  const hmac = new crypto.createHmac('sha512', secret_buffer);\n  const hash_digest = hash.update(nonce + message).digest('binary');\n  const hmac_digest = hmac.update(path + hash_digest, 'binary').digest('base64');\n  return hmac_digest;\n};\n\nreturn {\n  apiKey: apiKey,\n  signature: getMessageSignature(path, payload, privateKey, nonce),\n  body: payload,\n  nonce: nonce,\n  volume: volume,  // Use the variable here too\n  pair: \"IAGUSD\"\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        96
+      ],
+      "id": "0ee4b67c-f30e-40c3-9c1b-b73d36cbf474",
+      "name": "BuySignature"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('node:crypto');\nconst apiKey = $('Configuration').first().json.kkpuikey ;\nconst privateKey = $('Configuration').first().json.kkpvkey ;\nconst nonce = (Date.now() * 1000).toString();  // Microseconds\nconst path = '/0/private/AddOrder';\n\n// Reference your volume variable here\nconst volume = $node[\"VolVar\"].json[\"volume\"];\n\nconst payload = `nonce=${nonce}&ordertype=market&type=sell&volume=${volume}&pair=NIGHTUSD`;\n\nconst getMessageSignature = (path, request, secret, nonce) => {\n  const message = request;\n  const secret_buffer = new Buffer(secret, 'base64');\n  const hash = new crypto.createHash('sha256');\n  const hmac = new crypto.createHmac('sha512', secret_buffer);\n  const hash_digest = hash.update(nonce + message).digest('binary');\n  const hmac_digest = hmac.update(path + hash_digest, 'binary').digest('base64');\n  return hmac_digest;\n};\n\nreturn {\n  apiKey: apiKey,\n  signature: getMessageSignature(path, payload, privateKey, nonce),\n  body: payload,\n  nonce: nonce,\n  volume: volume,  // Use the variable here too\n  pair: \"IAGUSD\"\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        608
+      ],
+      "id": "43e7e707-9448-4877-b4f9-07e220b6cf04",
+      "name": "SellSignature"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "03d73a85-5131-45b1-b185-5f9fccff98dc",
+              "name": "volume",
+              "value": 120,
+              "type": "number"
+            },
+            {
+              "id": "13795394-af5b-469f-a271-0f5884280879",
+              "name": "percentagechange",
+              "value": 5,
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "61c4d6f2-45d1-4263-ab76-917518a5ea2b",
+      "name": "VolVar"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the trades data - handle different input structures\nlet trades;\n\n// Check if items[0] has the expected structure\nif (items[0] && items[0].json && items[0].json.result && items[0].json.result.trades) {\n    trades = items[0].json.result.trades;\n} else {\n    // Handle case where data might be structured differently\n    console.log(\"Unexpected data structure:\", JSON.stringify(items[0], null, 2));\n    return [{ json: { error: \"No trades data found\" } }];\n}\n\nconst adaTrades = [];\n\n// Extract all ADA trades with their keys\nfor (const [key, trade] of Object.entries(trades)) {\n    if (trade.pair === 'NIGHTUSD') {\n        adaTrades.push({\n            key: key,\n            ...trade\n        });\n    }\n}\n\n// Check if we found any ADA trades\nif (adaTrades.length === 0) {\n    return [{ json: { error: \"No NIGHT trades found\" } }];\n}\n\n// Sort by time (most recent first) and get the last one\nconst lastAdaTrade = adaTrades.sort((a, b) => b.time - a.time)[0];\n\nreturn [{ json: lastAdaTrade }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        384
+      ],
+      "id": "1987f97a-09b0-4cc9-9cd0-58e3f46d4109",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the required values\nconst askPrice = parseFloat(items[0].json.result.NIGHTUSD.a[0]); // Ask price\nconst bidPrice = parseFloat(items[0].json.result.NIGHTUSD.b[0]); // Bid price\nconst latestTradePrice = parseFloat($('Code').item.json.price);\n\n// Calculate pdelta for both ask and bid\nconst askPdelta = ((askPrice - latestTradePrice) / latestTradePrice) * 100;\nconst bidPdelta = ((bidPrice - latestTradePrice) / latestTradePrice) * 100;\n\n// Determine trading decision based on appropriate price\nlet decision;\nlet justification;\n\nif (bidPdelta < -$('VolVar').first().json.percentagechange) {\n  // Use bid price for selling (we sell at bid)\n  decision = \"BUY\";\n  justification = `Ask: ${askPrice}, Bid: ${bidPrice}, Latest Trade: ${latestTradePrice}, Bid pdelta: ${bidPdelta.toFixed(2)}%. Buy signal triggered as bid pdelta fell below % threshold.`;\n} else if (askPdelta > $('VolVar').first().json.percentagechange) {\n  // Use ask price for buying (we buy at ask)\n  decision = \"SELL\";\n  justification = `Ask: ${askPrice}, Bid: ${bidPrice}, Latest Trade: ${latestTradePrice}, Ask pdelta: ${askPdelta.toFixed(2)}%. Sell signal triggered as ask pdelta rose above % threshold.`;\n} else {\n  decision = \"DO NOTHING\";\n  justification = `Ask: ${askPrice}, Bid: ${bidPrice}, Latest Trade: ${latestTradePrice}, Ask pdelta: ${askPdelta.toFixed(2)}%, Bid pdelta: ${bidPdelta.toFixed(2)}%. No action needed as neither crossed thresholds.`;\n}\n\n// Return the result in JSON format\nreturn [{\n  json: {\n    decision: decision,\n    justification: justification,\n    askPrice: askPrice,\n    bidPrice: bidPrice,\n    askPdelta: parseFloat(askPdelta.toFixed(2)),\n    bidPdelta: parseFloat(bidPdelta.toFixed(2)),\n    latestTradePrice: latestTradePrice\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        384
+      ],
+      "id": "251adb9f-1ea9-4e57-b6bd-a032cf4914b4",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2e73e9e8-f06f-4309-932c-896b24dcd529",
+              "name": "kkpuikey",
+              "value": "[API_KEY]",
+              "type": "string"
+            },
+            {
+              "id": "2face6ce-b771-4bd4-92fa-58b20b1033e5",
+              "name": "kkpvkey",
+              "value": "[PRIVATE_KEY]",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        256,
+        0
+      ],
+      "id": "ae44dd67-15b9-477e-8feb-8c945c576088",
+      "name": "Configuration"
+    },
+    {
+      "parameters": {
+        "content": "## Schedule Instructions \nKraken APIs have a 1 second wait time. \n\nThe **default wait time between executions is 5 minutes.**",
+        "height": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        528
+      ],
+      "id": "f317198c-78ec-4464-ba9a-aff13ff8e941",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Volume \nThe **quantity** of NIGHT that will be **bought and sold** when the target price threshold is met.\n\n*The default value is set to 100.*",
+        "height": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -288
+      ],
+      "id": "4883933e-7122-427c-9d90-121f2af8efd4",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## API Configuration\nStore your Kraken API credentials here.\n- kkpuikey: Your Kraken API public key\n- kkpvkey: Your Kraken API private key\n\n⚠️ **Keep these credentials secure!**",
+        "height": 224,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        272,
+        -288
+      ],
+      "id": "81e50e11-602b-40c3-82e0-17b4dff7f980",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Authentication\nCreates the required HMAC signature \nfor Kraken private API calls using \nyour credentials and current timestamp.\n\n**Required for balance checks.**",
+        "height": 224,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        256,
+        592
+      ],
+      "id": "8025ce31-4f19-49a8-b699-8be41e7aaa7c",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Balance Check\nRetrieves your USDT balance to ensure\nyou have sufficient funds before \nattempting to buy NIGHT.\n\nPrevents failed transactions.",
+        "height": 224,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        608,
+        80
+      ],
+      "id": "153212b2-0f46-4256-ba4c-2b41dea1fb40",
+      "name": "Sticky Note4",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Trade History\nFetches your recent NIGHT trades to \nget the last transaction price.\n\nThis price is used as the baseline\nfor percentage calculations.",
+        "height": 224,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1168,
+        112
+      ],
+      "id": "344bfac2-656b-49a6-b35f-457209f3c3e8",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Last Trade Extraction\nFilters and sorts your trade history\nto find the most recent NIGHT trade.\n\nReturns: price, time, and trade details",
+        "height": 224,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        560
+      ],
+      "id": "ae8def0d-d7cf-46b8-a729-7906898a2906",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Live Price Data\nGets current NIGHT market data:\n- Ask price (selling price)\n- Bid price (buying price)\n\nUpdated every execution cycle.",
+        "height": 224,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1872,
+        64
+      ],
+      "id": "b96ac64d-35be-4010-ba85-4f07806ae7cd",
+      "name": "Sticky Note7",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## Trading Logic\nCompares current prices vs last trade:\n- **BUY**: if bid drops >2% below last trade\n- **SELL**: if ask rises >2% above last trade\n- **DO NOTHING**: if within ±2% range\n\nCore decision-making algorithm.",
+        "height": 224,
+        "width": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        560
+      ],
+      "id": "bd84faee-59ef-4d65-a234-6be2639b6fbc",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "## Balance Validation\nFor BUY orders only:\nEnsures USDT balance ≥ volume amount\nbefore proceeding with purchase.\n\n**Prevents insufficient funds errors.**",
+        "height": 224,
+        "width": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2480,
+        0
+      ],
+      "id": "2da999f0-fef1-446d-bcfa-8b8fbb7abd35",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "## Order Signatures\nCreates authenticated API calls for:\n- Market buy orders (ADAUSDT)\n- Market sell orders (ADAUSDT)\n\nUses volume from VolVar node.",
+        "height": 224,
+        "width": 336
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2832,
+        784
+      ],
+      "id": "db3831c6-b2e9-4a57-ae46-693bf7f05bae",
+      "name": "Sticky Note10",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## API Rate Limiting\n1-second delays between API calls\nto comply with Kraken's rate limits.\n\nPrevents API errors and bans.",
+        "height": 224,
+        "width": 288
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        848,
+        560
+      ],
+      "id": "89214a96-aa7e-4219-8c71-3e75e67bfda8",
+      "name": "Sticky Note12"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "VolVar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "RecentTradeSignature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetBalance": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GenerateSignature": {
+      "main": [
+        [
+          {
+            "node": "GetBalance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RecentTradeSignature": {
+      "main": [
+        [
+          {
+            "node": "GetRecentTrades",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetRecentTrades": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SellSignature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        []
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "BuySignature",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BuySignature": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SellSignature": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VolVar": {
+      "main": [
+        [
+          {
+            "node": "Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuration": {
+      "main": [
+        [
+          {
+            "node": "GenerateSignature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "93217133-558e-401d-a052-fc45a42476b8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cf7d1c780c5d67fce0f88b28af2c6cc416207f232b69be1685f77a7fa81bc5c6"
+  },
+  "id": "5arrfmzBlIxPIpte",
+  "tags": []
+}
